@@ -13,14 +13,6 @@ library(maps)
 library(shiny)
 library(tidyr)
 
-Par_Export_Functions <- c("calculate_great_circles", "calculate_tour_distance", "calculateFitnessOfPop", "calculateRanksOfPop",
-                          "generate_random_cities","generateChild","generateChildren", "getMappedGene","getParentCitiesVisitedFromPopUsingProb",
-                          "miles_per_meter", "mutateChildren", "plot_base_map", "plot_city_map", "plot_tour", "runEA")
-
-Par_Export_Packages <- c("doParallel", "dplyr", "foreach", "geosphere", "maps", "shiny", "tidyr")
-
-
-
 shinyServer(function(input, output, session) {
 
     source("helpers.R", local = TRUE)
@@ -56,11 +48,11 @@ shinyServer(function(input, output, session) {
 
         if (input$map_name == "World") {
             selectedCities <- generate_random_cities(n = 20, min_dist = 500,
-                                                     usa_only = FALSE
+                usa_only = FALSE
             )
         } else {
             selectedCities <- generate_random_cities(n = 20, min_dist = 50,
-                                                     usa_only = TRUE
+                usa_only = TRUE
             )
         }
 
@@ -107,11 +99,11 @@ shinyServer(function(input, output, session) {
 
         if (input$map_name == "World") {
             randomCities <- generate_random_cities(n = 20, min_dist = 500,
-                                                   usa_only = FALSE
+                usa_only = FALSE
             )
         } else {
             randomCities <- generate_random_cities(n = 20, min_dist = 50,
-                                                   usa_only = TRUE
+                usa_only = TRUE
             )
         }
 
@@ -165,18 +157,18 @@ shinyServer(function(input, output, session) {
 
     output$map <- renderPlot({
         plot_tour(vals$cities, vals$tour, great_circles,
-                  map_name = tolower(input$map_name),
-                  label_cities = input$label_cities
+            map_name = tolower(input$map_name),
+            label_cities = input$label_cities
         )
 
         pretty_dist = prettyNum(vals$tour_distance, big.mark = ",", digits = 0,
-                                scientific = FALSE
+            scientific = FALSE
         )
         pretty_iter = prettyNum(vals$iter, big.mark = ",", digits = 0,
-                                scientific = FALSE
+            scientific = FALSE
         )
         plot_title = paste0("Distance: ", pretty_dist, " miles\n",
-                            "Generations: ", pretty_iter
+            "Generations: ", pretty_iter
         )
 
         title(plot_title)
