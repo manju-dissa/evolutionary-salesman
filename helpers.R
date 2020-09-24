@@ -78,7 +78,7 @@ plot_city_map = function(cities, map_name = "world", label_cities = TRUE) {
 }
 
 plot_tour = function(cities, tour, great_circles, map_name = "world",
-        label_cities = TRUE) {
+                     label_cities = TRUE) {
     plot_city_map(cities, map_name, label_cities = label_cities)
 
     if (length(tour) > 1) {
@@ -118,7 +118,7 @@ calculate_tour_distance = function(tour) {
 }
 
 runEA <- function(population, iterations, currentRun, elitist_count,
-        mutation_probability) {
+                  mutation_probability) {
 
     registerDoParallel(3)
 
@@ -145,9 +145,12 @@ runEA <- function(population, iterations, currentRun, elitist_count,
 
 calculateFitnessOfPop <- function(population) {
     popSize <- nrow(population)
-    distances <- foreach (i = 1:popSize, .combine = c) %dopar% {
-        calculate_tour_distance(population[i, ]$cities_visited[[1]])
-    }
+    distances <- foreach (i = 1:popSize, .combine = c, .export = c("calculate_great_circles", "calculate_tour_distance", "calculateFitnessOfPop", "calculateRanksOfPop",
+                                                                   "generate_random_cities","generateChild","generateChildren", "getMappedGene","getParentCitiesVisitedFromPopUsingProb",
+                                                                   "miles_per_meter", "mutateChildren", "plot_base_map", "plot_city_map", "plot_tour", "runEA"),
+                          .packages = c("doParallel", "dplyr", "foreach", "geosphere", "maps", "shiny", "tidyr")) %dopar% {
+                              calculate_tour_distance(population[i, ]$cities_visited[[1]])
+                          }
     population$ID = 1:popSize
     population$distance_travelled = distances
     return(population)
@@ -169,7 +172,11 @@ generateChildren <- function(population, elitist_count) {
     numberOfChildren <- nrow(population) - elitist_count
     childLength <- length(population[1,]$cities_visited[[1]])
 
-    children <- foreach (i = 1:numberOfChildren, .combine = rbind) %dopar% {
+    children <- foreach (i = 1:numberOfChildren, .combine = rbind, .export = c("calculate_great_circles", "calculate_tour_distance", "calculateFitnessOfPop", "calculateRanksOfPop",
+                                                                               "generate_random_cities","generateChild","generateChildren", "getMappedGene","getParentCitiesVisitedFromPopUsingProb",
+                                                                               "miles_per_meter", "mutateChildren", "plot_base_map", "plot_city_map", "plot_tour", "runEA"
+    ),
+    .packages = c("doParallel", "dplyr", "foreach", "geosphere", "maps", "shiny", "tidyr")) %dopar% {
         return(
             list(
                 generateChild(totalFitness, childLength, population)

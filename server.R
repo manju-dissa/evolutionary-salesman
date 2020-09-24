@@ -13,27 +13,35 @@ library(maps)
 library(shiny)
 library(tidyr)
 
+Par_Export_Functions <- c("calculate_great_circles", "calculate_tour_distance", "calculateFitnessOfPop", "calculateRanksOfPop",
+                          "generate_random_cities","generateChild","generateChildren", "getMappedGene","getParentCitiesVisitedFromPopUsingProb",
+                          "miles_per_meter", "mutateChildren", "plot_base_map", "plot_city_map", "plot_tour", "runEA")
+
+Par_Export_Packages <- c("doParallel", "dplyr", "foreach", "geosphere", "maps", "shiny", "tidyr")
+
+
+
 shinyServer(function(input, output, session) {
-    
-    source("helpers.R", TRUE)
-    
+
+    source("helpers.R", local = TRUE)
+
     # TODO Manju - Drive these through the UI
     ea_number_of_individuals <- 50
     ea_elitist_count <- 2
     ea_mutation_probability <- 75 #this is a %
     ea_max_iter <- 100
     ea_plot_after <- 5
-    
+
     # Some globals
     dist_mat <- NULL
     ea_population <- NULL
     great_circles <- NULL
-    
+
     vals = reactiveValues(iter = 0)
 
     if (!exists("all_cities")) all_cities = readRDS("data/cities.rds")
     if (!exists("usa_cities")) usa_cities = readRDS("data/usa_cities.rds")
-    
+
     citiesForTourType = reactive({
         req(input$map_name)
         if (input$map_name == "World") {
@@ -42,17 +50,17 @@ shinyServer(function(input, output, session) {
             return(usa_cities)
         }
     })
-    
+
     output$citiesUI <- renderUI({
         req(input$map_name)
-        
+
         if (input$map_name == "World") {
             selectedCities <- generate_random_cities(n = 20, min_dist = 500,
-                usa_only = FALSE
+                                                     usa_only = FALSE
             )
         } else {
             selectedCities <- generate_random_cities(n = 20, min_dist = 50,
-                usa_only = TRUE
+                                                     usa_only = TRUE
             )
         }
 
@@ -73,7 +81,7 @@ shinyServer(function(input, output, session) {
             )
         )
     })
-    
+
     observeEvent(input$cities, {
         if(length(input$cities) >= 2) {
             selectedCities <- citiesForTourType() %>%
@@ -81,11 +89,11 @@ shinyServer(function(input, output, session) {
                     full.name %in% input$cities
                 )
             selectedCities$n <- 1:length(input$cities)
-            
+
             isolate({
                 vals$cities <- selectedCities
                 vals$tour <- 1:nrow(selectedCities)
-                dist_mat <<- distm(vals$cities[, c("long", "lat")]) * 
+                dist_mat <<- distm(vals$cities[, c("long", "lat")]) *
                     miles_per_meter
                 dimnames(dist_mat) <- list(vals$cities$name, vals$cities$name)
                 great_circles <<- calculate_great_circles(vals$cities)
@@ -93,27 +101,27 @@ shinyServer(function(input, output, session) {
             })
         }
     })
-    
+
     observeEvent(input$set_random_cities, {
         req(input$map_name)
-        
+
         if (input$map_name == "World") {
             randomCities <- generate_random_cities(n = 20, min_dist = 500,
-                usa_only = FALSE
+                                                   usa_only = FALSE
             )
         } else {
             randomCities <- generate_random_cities(n = 20, min_dist = 50,
-                usa_only = TRUE
+                                                   usa_only = TRUE
             )
         }
-        
+
         updateSelectizeInput(
-            session, 
-            "cities", 
+            session,
+            "cities",
             selected = randomCities$full.name
         )
     })
-    
+
     observe({
         isolate({
             if (vals$iter == 1) {
@@ -138,39 +146,39 @@ shinyServer(function(input, output, session) {
                     ea_elitist_count,
                     ea_mutation_probability
                 )
-                vals$tour <- 
+                vals$tour <-
                     ea_population$cities_visited[nrow(ea_population)][[1]]
-                vals$tour_distance <- 
+                vals$tour_distance <-
                     ea_population$distance_travelled[nrow(ea_population)][[1]]
                 vals$iter <- vals$iter + ea_plot_after
             }
         })
-        
+
         if (vals$iter >= 1 & vals$iter < ea_max_iter) {
             invalidateLater(0, session)
         }
     })
-    
+
     observeEvent(input$go_button, {
         vals$iter <- 1
     })
-    
+
     output$map <- renderPlot({
         plot_tour(vals$cities, vals$tour, great_circles,
-            map_name = tolower(input$map_name), 
-            label_cities = input$label_cities
+                  map_name = tolower(input$map_name),
+                  label_cities = input$label_cities
         )
-        
+
         pretty_dist = prettyNum(vals$tour_distance, big.mark = ",", digits = 0,
-            scientific = FALSE
+                                scientific = FALSE
         )
         pretty_iter = prettyNum(vals$iter, big.mark = ",", digits = 0,
-            scientific = FALSE
+                                scientific = FALSE
         )
-        plot_title = paste0("Distance: ", pretty_dist, " miles\n", 
-            "Generations: ", pretty_iter
+        plot_title = paste0("Distance: ", pretty_dist, " miles\n",
+                            "Generations: ", pretty_iter
         )
-        
+
         title(plot_title)
     }, height = 550)
 })
