@@ -14,27 +14,25 @@ generate_random_cities = function(n = 10, min_dist = 250, usa_only = FALSE) {
         candidates = all_cities
     }
 
-    cities = candidates[sample(nrow(candidates), 1), ]
+    cities = candidates[sample(nrow(candidates), 1),]
     candidates = subset(candidates, !(full.name %in% cities$full.name))
 
     i = 0
     while (nrow(cities) < n & i < nrow(all_cities)) {
-        candidate = candidates[sample(nrow(candidates), 1), ]
+        candidate = candidates[sample(nrow(candidates), 1),]
         candidate_dist_matrix =
             distm(rbind(cities, candidate)[, c("long", "lat")]) * miles_per_meter
 
         if (min(candidate_dist_matrix[candidate_dist_matrix > 0]) > min_dist) {
             cities = rbind(cities, candidate)
-            candidates = subset(
-                candidates,
-                !(candidates$full.name %in% cities$full.name)
-            )
+            candidates = subset(candidates,
+                !(candidates$full.name %in% cities$full.name))
         }
 
         i = i + 1
     }
 
-    cities = cities[order(cities$full.name), ]
+    cities = cities[order(cities$full.name),]
     cities$n = 1:nrow(cities)
 
     return(cities)
@@ -58,42 +56,38 @@ plot_base_map = function(map_name = "world") {
             fill = TRUE,
             mar = margins
         )
-        map(
-            "state",
+        map("state",
             add = TRUE,
             col = "#999999",
-            fill = FALSE
-        )
+            fill = FALSE)
     }
 }
 
 plot_city_map = function(cities, map_name = "world", label_cities = TRUE) {
     plot_base_map(map_name)
-    map.cities(
-        cities,
+    map.cities(cities,
         pch = 19,
         cex = 1.1,
-        label = label_cities
-    )
+        label = label_cities)
 }
 
 plot_tour = function(cities, tour, great_circles, map_name = "world",
-                     label_cities = TRUE) {
+        label_cities = TRUE) {
     plot_city_map(cities, map_name, label_cities = label_cities)
 
     if (length(tour) > 1) {
         closed_tour = c(tour, tour[1])
-        keys = apply(
-            embed(closed_tour, 2),
-            1, function(row) paste(sort(row), collapse = "_")
-        )
+        keys = apply(embed(closed_tour, 2),
+            1, function(row)
+                paste(sort(row), collapse = "_"))
         invisible(sapply(great_circles[keys], lines, lwd = 0.8))
     }
 }
 
 calculate_great_circles = function(cities) {
     great_circles = list()
-    if (nrow(cities) == 0) return(great_circles)
+    if (nrow(cities) == 0)
+        return(great_circles)
 
     pairs = combn(cities$n, 2)
     for (i in 1:ncol(pairs)) {
@@ -118,8 +112,7 @@ calculate_tour_distance = function(tour) {
 }
 
 runEA <- function(population, iterations, currentRun, elitist_count,
-                  mutation_probability) {
-
+        mutation_probability) {
     registerDoParallel(3)
 
     for (i in 1:iterations) {
@@ -145,12 +138,39 @@ runEA <- function(population, iterations, currentRun, elitist_count,
 
 calculateFitnessOfPop <- function(population) {
     popSize <- nrow(population)
-    distances <- foreach (i = 1:popSize, .combine = c, .export = c("calculate_great_circles", "calculate_tour_distance", "calculateFitnessOfPop", "calculateRanksOfPop",
-                                                                   "generate_random_cities","generateChild","generateChildren", "getMappedGene","getParentCitiesVisitedFromPopUsingProb",
-                                                                   "miles_per_meter", "mutateChildren", "plot_base_map", "plot_city_map", "plot_tour", "runEA"),
-                          .packages = c("doParallel", "dplyr", "foreach", "geosphere", "maps", "shiny", "tidyr")) %dopar% {
-                              calculate_tour_distance(population[i, ]$cities_visited[[1]])
-                          }
+    distances <-
+        foreach (
+            i = 1:popSize,
+            .combine = c,
+            .export = c(
+                "calculate_great_circles",
+                "calculate_tour_distance",
+                "calculateFitnessOfPop",
+                "calculateRanksOfPop",
+                "generate_random_cities",
+                "generateChild",
+                "generateChildren",
+                "getMappedGene",
+                "getParentCitiesVisitedFromPopUsingProb",
+                "miles_per_meter",
+                "mutateChildren",
+                "plot_base_map",
+                "plot_city_map",
+                "plot_tour",
+                "runEA"
+            ),
+            .packages = c(
+                "doParallel",
+                "dplyr",
+                "foreach",
+                "geosphere",
+                "maps",
+                "shiny",
+                "tidyr"
+            )
+        ) %dopar% {
+            calculate_tour_distance(population[i,]$cities_visited[[1]])
+        }
     population$ID = 1:popSize
     population$distance_travelled = distances
     return(population)
@@ -167,22 +187,45 @@ calculateRanksOfPop <- function(population) {
 }
 
 generateChildren <- function(population, elitist_count) {
-
     totalFitness <- max(cumsum(1:nrow(population)))
     numberOfChildren <- nrow(population) - elitist_count
-    childLength <- length(population[1,]$cities_visited[[1]])
+    childLength <- length(population[1, ]$cities_visited[[1]])
 
-    children <- foreach (i = 1:numberOfChildren, .combine = rbind, .export = c("calculate_great_circles", "calculate_tour_distance", "calculateFitnessOfPop", "calculateRanksOfPop",
-                                                                               "generate_random_cities","generateChild","generateChildren", "getMappedGene","getParentCitiesVisitedFromPopUsingProb",
-                                                                               "miles_per_meter", "mutateChildren", "plot_base_map", "plot_city_map", "plot_tour", "runEA"
-    ),
-    .packages = c("doParallel", "dplyr", "foreach", "geosphere", "maps", "shiny", "tidyr")) %dopar% {
-        return(
-            list(
-                generateChild(totalFitness, childLength, population)
+    children <-
+        foreach (
+            i = 1:numberOfChildren,
+            .combine = rbind,
+            .export = c(
+                "calculate_great_circles",
+                "calculate_tour_distance",
+                "calculateFitnessOfPop",
+                "calculateRanksOfPop",
+                "generate_random_cities",
+                "generateChild",
+                "generateChildren",
+                "getMappedGene",
+                "getParentCitiesVisitedFromPopUsingProb",
+                "miles_per_meter",
+                "mutateChildren",
+                "plot_base_map",
+                "plot_city_map",
+                "plot_tour",
+                "runEA"
+            ),
+            .packages = c(
+                "doParallel",
+                "dplyr",
+                "foreach",
+                "geosphere",
+                "maps",
+                "shiny",
+                "tidyr"
             )
-        )
-    }
+        ) %dopar% {
+            return(list(generateChild(
+                totalFitness, childLength, population
+            )))
+        }
 
     return(
         data.frame(
@@ -195,7 +238,6 @@ generateChildren <- function(population, elitist_count) {
 }
 
 generateChild <- function(totalFitness, childLength, population) {
-
     # Create two cut points (c1, c2)
     # Copy c1 - c2 from p2 to o1
     # copy bits from p1 to o1:
@@ -265,13 +307,17 @@ mutateChildren <- function(children, mutation_probability) {
     for (i in 1:nrow(children)) {
         randomNumber <- sample(1:100, 1)
         if (randomNumber <= mutation_probability) {
-            childLength <- length(children[i, ]$cities_visited[[1]])
+            childLength <- length(children[i,]$cities_visited[[1]])
             gene1ForSwap <- sample(1:childLength, 1)
-            gene1Value <- children[i, ]$cities_visited[[1]][gene1ForSwap]
+            gene1Value <-
+                children[i,]$cities_visited[[1]][gene1ForSwap]
             gene2ForSwap <- sample(1:childLength, 1)
-            gene2Value <- children[i, ]$cities_visited[[1]][gene2ForSwap]
-            children[i, ]$cities_visited[[1]][gene1ForSwap] <- gene2Value
-            children[i, ]$cities_visited[[1]][gene2ForSwap] <- gene1Value
+            gene2Value <-
+                children[i,]$cities_visited[[1]][gene2ForSwap]
+            children[i,]$cities_visited[[1]][gene1ForSwap] <-
+                gene2Value
+            children[i,]$cities_visited[[1]][gene2ForSwap] <-
+                gene1Value
         }
     }
     return(children)
